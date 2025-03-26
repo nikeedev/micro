@@ -1,0 +1,8 @@
+Hello world!
+
+if !args[1].ends_with(".cv1") {
+    println!("Invalid file extension. File extension must be .cv1 (this is done to prevent program from misbehaving if a different file is passed)");
+    exit(0x1)
+}
+
+0123456789

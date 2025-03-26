@@ -1,5 +1,9 @@
-use std::{env, fs, process::{self, exit}};
-
+use std::{
+    env,
+    fs,
+    process::exit,
+    collections::HashMap
+};
 
 fn get_value_arg<'a>(from: &'static str, v: &'a[String]) -> Option<&'a String> {
     let index = v.iter().position(|r| r == from).unwrap();
@@ -9,8 +13,39 @@ fn get_value_arg<'a>(from: &'static str, v: &'a[String]) -> Option<&'a String> {
     // exit(1);
 }
 
-fn compress(text: String) {
+fn compress(text: String) -> String {
+    println!("[1/3] Compressing..."); 
     
+    let mut chars: Vec<char> = text.chars().collect();
+    
+    let mut count: HashMap<char, u128> = HashMap::new();
+
+    chars.iter().for_each(|x| {
+        if count.contains_key(&x) {
+            *count.get_mut(&x).unwrap() += 1 as u128;
+        } else {
+            count.insert(*x, 1);
+        }
+    });
+    
+    let mut var_count: u32 = 0b1;
+    count.iter().for_each(|x| {
+        if *x.1 > 1 {
+            chars.iter_mut().for_each(|c| {
+                if *c == *x.0 {
+                    *c = std::char::from_u32(0b0100 + var_count).unwrap_or('?');
+                }
+            });
+            chars.insert(0, std::char::from_u32(0b0100 + var_count).unwrap_or('?'));
+            chars.insert(1, *x.0);
+            var_count += 0b001;
+        }
+    });
+    
+    let new_text: String = chars.into_iter().collect();
+        
+    println!("[2/3] Done compressing!");
+    new_text
 }
 
 fn decompress(text: String) {
@@ -40,10 +75,16 @@ fn main() {
         }
         
         let temp = temp.unwrap();
-        match fs::read_to_string(temp) {
+        
+        let new_file = match fs::read_to_string(temp) {
             Ok(x) => compress(x),
             Err(x) => panic!("Error reading \"{}\": {}", temp, x),
-        } 
+        };
+        
+        let mut temp: String = temp.to_owned(); 
+        temp.push_str(".cv1");
+        println!("[3/3] Saving to file: {}", temp); 
+        fs::write(temp, new_file).unwrap(); 
     }
    
     if args.contains(&"decomp".to_string()) {
@@ -62,7 +103,7 @@ fn main() {
         }
 
         match fs::read_to_string(temp) {
-            Ok(x) => compress(x),
+            Ok(x) => decompress(x),
             Err(x) => panic!("Error reading \"{}\": {}", temp, x),
         } 
     }
