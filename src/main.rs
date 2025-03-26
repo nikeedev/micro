@@ -57,6 +57,7 @@ fn main() {
 
     
     if args.contains(&"help".to_string()) || args.len() < 2 {
+        println!(":: micro :: CV1 compressor and decompressor - v0.1.6");
         println!("usage: micro [command] <file>");
         println!("command:");
         println!("\thelp: shows this message");
