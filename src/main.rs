@@ -1,3 +1,8 @@
+// notes:
+// 0x000001 is for setting variable + variable code
+// 0x000002 is for getting variable + variable code
+
+
 use std::{
     env,
     fs,
@@ -14,7 +19,7 @@ fn get_value_arg<'a>(from: &'static str, v: &'a[String]) -> Option<&'a String> {
 }
 
 fn compress(text: String) -> String {
-    println!("[1/3] Compressing..."); 
+    println!("[1/2] Compressing..."); 
     
     let mut chars: Vec<char> = text.chars().collect();
     
@@ -24,27 +29,47 @@ fn compress(text: String) -> String {
         if count.contains_key(&x) {
             *count.get_mut(&x).unwrap() += 1 as u128;
         } else {
-            count.insert(*x, 1);
+            count.insert(*x, 1 as u128);
         }
     });
     
-    let mut var_count: u32 = 0b1;
+    let mut new_chars: Vec<char> = Vec::new();
+
+    let mut var_count: u32 = 0x000001;
+    
+    let mut vars: HashMap<char, char> = HashMap::new();
+
     count.iter().for_each(|x| {
         if *x.1 > 1 {
-            chars.iter_mut().for_each(|c| {
-                if *c == *x.0 {
-                    *c = std::char::from_u32(0b0100 + var_count).unwrap_or('?');
-                }
-            });
-            chars.insert(0, std::char::from_u32(0b0100 + var_count).unwrap_or('?'));
-            chars.insert(1, *x.0);
-            var_count += 0b001;
+            // add variable assign signal
+            new_chars.push(std::char::from_u32(0x000001).unwrap());
+            // variable name: 
+            new_chars.push(std::char::from_u32(var_count).unwrap());
+            // variables value
+            new_chars.push(std::char::from_u32(*x.0 as u32+0x0000ff).unwrap());
+            
+            vars.insert(*x.0, std::char::from_u32(var_count).unwrap());
+
+            var_count += 0x000001;
         }
     });
-    
-    let new_text: String = chars.into_iter().collect();
+
+    println!("new vars: {:#?}", vars);
+
+    chars.iter().for_each(|x| {
+        if vars.contains_key(&x) {
+            new_chars.push(std::char::from_u32(0x000002).unwrap());
+            new_chars.push(vars[&x]);
+        } else {
+            new_chars.push(*x);
+        }
+    });
+
+    // println!("new char: {:#?}", new_chars);
+
+    let new_text: String = new_chars.into_iter().collect();
         
-    println!("[2/3] Done compressing!");
+    println!(":: Done compressing!");
     new_text
 }
 
@@ -84,7 +109,7 @@ fn main() {
         
         let mut temp: String = temp.to_owned(); 
         temp.push_str(".cv1");
-        println!("[3/3] Saving to file: {}", temp); 
+        println!("[2/2] Saving to file: {}!", temp); 
         fs::write(temp, new_file).unwrap(); 
     }
    
