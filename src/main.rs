@@ -21,7 +21,7 @@ fn get_value_arg<'a>(from: &'static str, v: &'a[String]) -> Option<&'a String> {
 fn compress(text: String) -> String {
     println!("[1/2] Compressing..."); 
     
-    let mut chars: Vec<char> = text.chars().collect();
+    let chars: Vec<char> = text.chars().collect();
     
     let mut count: HashMap<char, u128> = HashMap::new();
 
@@ -54,14 +54,14 @@ fn compress(text: String) -> String {
         }
     });
 
-    println!("new vars: {:#?}", vars);
+    // println!("new vars: {:#?}", vars);
 
     chars.iter().for_each(|x| {
         if vars.contains_key(&x) {
             new_chars.push(std::char::from_u32(0x000002).unwrap());
             new_chars.push(vars[&x]);
         } else {
-            new_chars.push(*x);
+            new_chars.push(std::char::from_u32(*x as u32 + 0x0000ff).unwrap());
         }
     });
 
@@ -69,12 +69,62 @@ fn compress(text: String) -> String {
 
     let new_text: String = new_chars.into_iter().collect();
         
-    println!(":: Done compressing!");
+    println!("[1/2] Done compressing!");
     new_text
 }
 
-fn decompress(text: String) {
+fn decompress(text: String) -> String {
+    println!("[1/2] Decompressing..."); 
+
+    let chars: Vec<char> = text.chars().collect();
     
+    let mut vars: HashMap<u32, char> = HashMap::new();
+    
+    let mut i = 0;
+    
+    let mut new_chars: Vec<char> = Vec::new();
+
+    while i < chars.len() {
+        if chars[i] as u32 == 0x000001 {
+            if i + 2 >= chars.len() {
+                break;
+            }
+
+            let key = chars[i + 1] as u32;
+            let value = std::char::from_u32(chars[i + 2] as u32 - 0x0000ff).unwrap();
+
+            vars.insert(key, value);
+            
+            // println!("var {}: {}", i, value);
+            
+            i += 3;
+            continue;
+        } 
+        else if chars[i] as u32 == 0x000002 {
+            let replace = vars[&(chars[i+1] as u32)];
+            
+            new_chars.push(replace);
+
+            i += 2;
+            continue;
+        }
+        else {
+            
+            let decoded = std::char::from_u32(chars[i] as u32 - 0x0000ff).unwrap();
+            new_chars.push(decoded);
+            // println!("norm char {}: {}", i, decoded);
+        }   
+        
+        i += 1;
+    }
+    
+    // println!("{:#?}", new_chars);
+
+    println!("[1/2] Done decompressing!");
+
+    let output: String = new_chars.into_iter().collect();
+    
+    output
 }
 
 fn main() {
@@ -109,8 +159,9 @@ fn main() {
         
         let mut temp: String = temp.to_owned(); 
         temp.push_str(".cv1");
-        println!("[2/2] Saving to file: {}!", temp); 
+        println!("[2/2] Saving to file: {}", temp);
         fs::write(temp, new_file).unwrap(); 
+        println!("[2/2] Done!");
     }
    
     if args.contains(&"decomp".to_string()) {
@@ -128,10 +179,22 @@ fn main() {
             exit(0x1)
         }
 
-        match fs::read_to_string(temp) {
+        let output = match fs::read_to_string(temp) {
             Ok(x) => decompress(x),
             Err(x) => panic!("Error reading \"{}\": {}", temp, x),
-        } 
+        };
+
+        let trimmed = match temp.rfind('.') {
+            Some(index) => &temp[..index],
+            None => temp,
+        };
+        
+        println!("[2/2] Saving to {}", trimmed);
+
+        let _ = fs::write(trimmed, output.as_str());
+
+        println!("[2/2] Done!");
+        
     }
 
 
